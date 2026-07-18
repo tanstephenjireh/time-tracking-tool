@@ -209,6 +209,24 @@ export async function runSyncTask() {
       isSyncing: false,
       lastSyncedAt: new Date().toISOString()
     });
+    
+    const finalState = getSyncState();
+    if (finalState.lastSyncedAt) {
+      await prisma.syncSetting.upsert({
+        where: { id: 'global' },
+        update: {
+          lastSyncedAt: new Date(finalState.lastSyncedAt),
+          eventsProcessed: finalState.eventsProcessed,
+          eventsTotal: finalState.eventsTotal,
+        },
+        create: {
+          id: 'global',
+          lastSyncedAt: new Date(finalState.lastSyncedAt),
+          eventsProcessed: finalState.eventsProcessed,
+          eventsTotal: finalState.eventsTotal,
+        }
+      });
+    }
 
     log('INFO', 'sync_completed', {
       durationMs: Date.now() - new Date(triggeredAt).getTime(),

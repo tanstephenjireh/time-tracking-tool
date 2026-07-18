@@ -61,3 +61,11 @@ model ProcessedEvent {
 
   @@unique([eventId, employeeEmail]) // one row per event per attendee, dedupe guard
 }
+
+// ---------- 5. SETTINGS: Persistent Application State ----------
+model SyncSetting {
+  id              String    @id @default("global")
+  lastSyncedAt    DateTime?
+  eventsProcessed Int       @default(0)
+  eventsTotal     Int       @default(0)
+}
