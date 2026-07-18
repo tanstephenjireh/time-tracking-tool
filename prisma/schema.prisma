@@ -1,0 +1,63 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------- 1. RAW: Employees ----------
+model Employee {
+  id    String @id
+  name  String
+  email String @unique
+  role  String
+}
+
+// ---------- 2. RAW: Companies ----------
+model Company {
+  id             String @id
+  name           String
+  emailDomain    String @unique
+  annualRevenue  Int
+  customerTier   Int
+  accountOwnerId String
+}
+
+// ---------- 3. RAW: Events (as ingested, untouched) ----------
+model Event {
+  id           String   @id // calendar API UUID
+  summary      String
+  description  String?
+  startTime    DateTime
+  endTime      DateTime
+  creatorEmail String
+  attendees    String   // JSON string of attendee emails
+  syncedAt     DateTime @default(now())
+
+  processedEvents ProcessedEvent[] // 1-to-many now, one per attendee
+}
+
+// ---------- 4. PROCESSED: AI output, one row per event-per-attendee ----------
+model ProcessedEvent {
+  id            String   @id @default(cuid())
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id])
+
+  employeeEmail String
+  employeeName  String?
+
+  category      String   // one of the 15 fixed categories
+  companyId     String?  // nullable — internal/PTO events have no client
+  companyName   String?
+
+  durationMinutes Int
+  eventDate       DateTime
+
+  rawAiResponse String?  // full JSON response from AI proxy, for debugging/traceability
+
+  processedAt   DateTime @default(now())
+
+  @@unique([eventId, employeeEmail]) // one row per event per attendee, dedupe guard
+}
