@@ -122,7 +122,7 @@ export async function runSyncTask() {
         log('INFO', 'skipping_ai_proxy_as_requested');
       } else {
         // Batch AI Processing
-        const batchSize = parseInt(process.env.AI_PROXY_BATCH_SIZE || '2', 10);
+        const batchSize = parseInt(process.env.AI_PROXY_BATCH_SIZE || '1', 10);
 
       const knownCompanies = await prisma.company.findMany();
       // format known_companies to match prompt exactly
@@ -146,7 +146,7 @@ export async function runSyncTask() {
               end: ev.endTime
             };
             
-            const aiResult = await retry(() => callAiProxy(aiInput, formattedCompanies), 3, ev.id);
+            const aiResult = await retry(() => callAiProxy(aiInput, formattedCompanies), 5, ev.id);
             const { category, client_name, client_id } = aiResult.parsed_output;
             
             log('INFO', 'ai_call_success', { eventId: ev.id, category, clientName: client_name });
@@ -196,6 +196,9 @@ export async function runSyncTask() {
           }
           updateSyncState({ eventsProcessed: getSyncState().eventsProcessed + 1 });
         }));
+        
+        // Delay 0.5 seconds between batches to avoid rate limits
+        await delay(500);
       }
       }
     }
