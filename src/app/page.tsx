@@ -48,13 +48,18 @@ export default function DashboardPage() {
       {/* Conversational Filter Bar */}
       <div className="text-lg font-medium text-slate-600 py-4 flex flex-wrap items-center gap-y-2">
         <span>Showing time allocation for</span>
-        <select 
-          className="appearance-none inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm mx-1 outline-none border-none text-center"
-          value={filterEmp} onChange={e => setFilterEmp(e.target.value)}
-        >
-          <option value="all">All Team Members ▾</option>
-          {employees.map(e => <option key={e.id} value={e.email}>{e.name} ▾</option>)}
-        </select>
+        <div className="relative inline-flex items-center mx-1">
+          <select 
+            className="appearance-none bg-yellow-100 text-yellow-800 pl-3 pr-7 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm outline-none border-none text-center"
+            value={filterEmp} onChange={e => setFilterEmp(e.target.value)}
+          >
+            <option value="all">All Team Members</option>
+            {employees.map(e => <option key={e.id} value={e.email}>{e.name}</option>)}
+          </select>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-[45%] text-yellow-800 text-[10px]">
+            ▾
+          </span>
+        </div>
         <span>between</span>
         <input 
           type="date" 
