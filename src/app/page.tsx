@@ -6,6 +6,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [availableDates, setAvailableDates] = useState<{min: string, max: string} | null>(null);
   
   const [filterEmp, setFilterEmp] = useState('all');
   const [filterStart, setFilterStart] = useState('');
@@ -15,7 +16,19 @@ export default function DashboardPage() {
     fetch('/api/employees')
       .then(r => r.json())
       .then(d => setEmployees(d.employees || []));
+
+    fetch('/api/dashboard/dates')
+      .then(r => r.json())
+      .then(d => {
+        if (d.minDate && d.maxDate) {
+          setAvailableDates({ min: d.minDate, max: d.maxDate });
+        }
+      });
   }, []);
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -46,33 +59,42 @@ export default function DashboardPage() {
     <div className="space-y-6">
       
       {/* Conversational Filter Bar */}
-      <div className="text-lg font-medium text-slate-600 py-4 flex flex-wrap items-center gap-y-2">
-        <span>Showing time allocation for</span>
-        <div className="relative inline-flex items-center mx-1">
-          <select 
-            className="appearance-none bg-yellow-100 text-yellow-800 pl-3 pr-7 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm outline-none border-none text-center"
-            value={filterEmp} onChange={e => setFilterEmp(e.target.value)}
-          >
-            <option value="all">All Team Members</option>
-            {employees.map(e => <option key={e.id} value={e.email}>{e.name}</option>)}
-          </select>
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-[45%] text-yellow-800 text-[10px]">
-            ▾
-          </span>
+      <div className="text-lg font-medium text-slate-600 py-4 flex flex-wrap items-center justify-between gap-y-2">
+        <div className="flex flex-wrap items-center gap-y-2">
+          <span>Showing time allocation for</span>
+          <div className="relative inline-flex items-center mx-1">
+            <select 
+              className="appearance-none bg-yellow-100 text-yellow-800 pl-3 pr-7 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm outline-none border-none text-center"
+              value={filterEmp} onChange={e => setFilterEmp(e.target.value)}
+            >
+              <option value="all">All Team Members</option>
+              {employees.map(e => <option key={e.id} value={e.email}>{e.name}</option>)}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-[45%] text-yellow-800 text-[10px]">
+              ▾
+            </span>
+          </div>
+          <span>between</span>
+          <input 
+            type="date" 
+            className="bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm mx-1 outline-none border-none" 
+            value={filterStart} onChange={e => setFilterStart(e.target.value)} 
+          />
+          <span>and</span>
+          <input 
+            type="date" 
+            className="bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm mx-1 outline-none border-none" 
+            value={filterEnd} onChange={e => setFilterEnd(e.target.value)} 
+          />
+          <span>.</span>
         </div>
-        <span>between</span>
-        <input 
-          type="date" 
-          className="bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm mx-1 outline-none border-none" 
-          value={filterStart} onChange={e => setFilterStart(e.target.value)} 
-        />
-        <span>and</span>
-        <input 
-          type="date" 
-          className="bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-full cursor-pointer hover:bg-yellow-200 transition-colors font-bold text-sm mx-1 outline-none border-none" 
-          value={filterEnd} onChange={e => setFilterEnd(e.target.value)} 
-        />
-        <span>.</span>
+
+        {availableDates && (
+          <div className="text-xs bg-purple-100 text-purple-800 px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1.5 shrink-0 ml-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+            Available: {formatDate(availableDates.min)} - {formatDate(availableDates.max)}
+          </div>
+        )}
       </div>
 
       {loading ? (
