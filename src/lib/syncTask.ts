@@ -191,7 +191,7 @@ export async function runSyncTask() {
               });
               writtenCount++;
             }
-            log('INFO', 'processed_events_upserted', { eventId: ev.id, attendeeCount: attendeesList.length, totalRowsWritten: writtenCount });
+            log('INFO', 'processed_events_upserted', { eventId: ev.id, attendeeCount: fanOutSet.size, totalRowsWritten: writtenCount });
           } catch (e: any) {
             // Already logged in retry
             updateSyncState({ errors: [...getSyncState().errors, `Event ${ev.id}: ${e.message}`] });
