@@ -78,8 +78,12 @@ npx tsc --noEmit
 
 ---
 
-## 📊 Dashboard Preview
+## 📸 Application Previews
 
 Here is a quick look at the finalized dashboard visualizing the processed calendar events:
 
 ![Time-Tracking Dashboard Overview](./dashboard_overview.png)
+
+And here is the background sync interface where you manage data ingestion:
+
+![Sync Settings View](./sync_settings_view.png)
