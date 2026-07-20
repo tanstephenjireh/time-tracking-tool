@@ -10,7 +10,10 @@ A full-stack MVP application built for internal Operations/Customer Success team
 - **SQLite + Prisma**: Perfect for a local-first MVP. The database is stored locally in a portable `.db` file, requiring zero external infrastructure setup. The schema strongly types our `Employee`, `Company`, `Event`, and `ProcessedEvent` models.
 - **Tailwind CSS**: Utility-first styling approach matching the internal color palette requirements quickly and cleanly without the bloat of heavy component libraries.
 - **Database-as-Cache Pattern**: To ensure the dashboard always loads instantly regardless of dataset size, the frontend exclusively reads pre-aggregated stats from the `ProcessedEvent` table. The dashboard never triggers external API or AI calls on load. Syncing is explicitly decoupled and runs asynchronously.
-- **AI Proxy Batching & Retries**: Calendar processing relies on an LLM proxy. To prevent overwhelming it (and the wallet), events are deduplicated logically and batched (default 2 concurrent) with an exponential backoff strategy for rate limit safety.
+- **Data Ingestion Resiliency**: To safely extract bulk data from the Calendar/Resources API without triggering rate limits, the synchronization engine is highly controlled. It iterates through every employee, fetching events where they are an `attendee` and then where they are a `creator`. Data is fetched in pages of 50 with built-in network retries and a strict 0.3-second "polite delay" between page requests. Records are then safely `upserted` into SQLite to prevent duplication.
+- **AI Proxy Batching & Retries**: Calendar processing relies on an LLM proxy. To prevent overwhelming it, events are processed in configurable batch sizes (default=1). The engine utilizes an exponential backoff retry system (up to 5 attempts on failure) and enforces a hard 0.5-second delay between every batch to strictly respect external rate limits.
+- **Smart Sync & Deduplication**: To prevent redundant processing, the background sync explicitly filters out events that have already been classified by querying the database (`WHERE id NOT IN...`). Triggering a manual sync multiple times is completely safe and will skip over already-processed events instantly.
+- **Cost-Optimized AI Fan-Out**: Each unique calendar event is sent to the LLM exactly **once**, regardless of how many employees attended it. Once the AI determines the category and client, that single classification is "fanned out" (copied) into the `ProcessedEvent` table for each internal attendee. This ensures massive API cost savings and drastic reductions in token usage.
 
 ## 🤖 AI Prompt & Output Strategy
 
@@ -35,13 +38,19 @@ Copy the example environment file and fill in your actual credentials (the exter
 ```bash
 cp .env.example .env
 ```
+
+**Note on Secrets Management:** 
+The application securely resolves environment variables dynamically. It accepts two formats for credentials:
+1. **Raw Credentials**: Perfect for local testing (e.g., `AI_PROXY_API_KEY="sk-12345"`).
+2. **AWS SSM Paths**: For production, simply provide the path (e.g., `AI_PROXY_API_KEY="/timetracker/AI_PROXY_API_KEY"`), and the app will automatically decrypt it from the AWS Parameter Store at runtime.
+
 Ensure your `.env` contains:
 - `DATABASE_URL="file:./dev.db"`
 - `RESOURCES_API_KEY="your_api_key"`
 - `AI_PROXY_URL="https://fasttrack-2-1035702834144.europe-west1.run.app/api/ai-proxy/structured"`
 - `AI_PROXY_EMAIL="your_auth_email"`
 - `AI_PROXY_API_KEY="your_ai_proxy_password"`
-- `AI_PROXY_BATCH_SIZE="2"`
+- `AI_PROXY_BATCH_SIZE="1"`
 
 ### 3. Initialize the Database
 Run the Prisma migration to create the SQLite database:
@@ -66,3 +75,11 @@ npm run test
 npm run lint
 npx tsc --noEmit
 ```
+
+---
+
+## 📊 Dashboard Preview
+
+Here is a quick look at the finalized dashboard visualizing the processed calendar events:
+
+![Time-Tracking Dashboard Overview](./dashboard_overview.png)
