@@ -163,12 +163,14 @@ export async function runSyncTask() {
             }
 
             // Fan out per attendee
-            const attendeesList = JSON.parse(ev.attendees);
+            const fanOutSet = new Set<string>(JSON.parse(ev.attendees));
+            if (ev.creatorEmail) fanOutSet.add(ev.creatorEmail);
+
             let writtenCount = 0;
             const durationMs = new Date(ev.endTime).getTime() - new Date(ev.startTime).getTime();
             const durationMinutes = Math.floor(durationMs / 60000);
 
-            for (const attEmail of attendeesList) {
+            for (const attEmail of fanOutSet) {
               const emp = await prisma.employee.findUnique({ where: { email: attEmail } });
               if (!emp) continue; // Only process internal employees
 
