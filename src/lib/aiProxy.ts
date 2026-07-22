@@ -4,9 +4,6 @@ import { z } from 'zod';
 export const AiProxyInputEventSchema = z.object({
   summary: z.string(),
   description: z.string().nullable().optional(),
-  // The background sync task already maps the raw calendar objects to a simple
-  // array of string emails before saving to the DB. So when it's passed here,
-  // it's just `["email1@example.com", "email2@example.com"]`.
   attendees: z.array(z.string()),
   start: z.union([z.string(), z.date()]),
   end: z.union([z.string(), z.date()])
@@ -117,8 +114,7 @@ export async function callAiProxy(
   knownCompanies: unknown[],
   maxAttempts = 3
 ): Promise<AiProxyOutput> {
-  // 1. INPUT GATING — throws on bad input (a caller bug, not recoverable),
-  //    and does so before any network call so nothing is wasted.
+  // INPUT GATING
   const validatedEvent = AiProxyInputEventSchema.parse(event);
   const validatedCompanies = z.array(AiProxyInputCompanySchema).parse(knownCompanies);
 
@@ -144,7 +140,6 @@ export async function callAiProxy(
   while (attempt < maxAttempts) {
     attempt++;
 
-    // 2. Body rebuilt each iteration so the corrected prompt is actually sent.
     const body = {
       prompt: buildPrompt(correction, badCategory),
       input: { event: validatedEvent, known_companies: validatedCompanies },
@@ -160,10 +155,6 @@ export async function callAiProxy(
       body: JSON.stringify(body)
     });
 
-    // 3a. HTTP-level failure. Distinguish retryable from non-retryable:
-    //     4xx (except 429) means the request itself is wrong — auth, bad
-    //     payload — and retrying identically will never help, so fail fast.
-    //     5xx and 429 are transient, so retry.
     if (!response.ok) {
       const errorText = await response.text();
       const isRetryable = response.status >= 500 || response.status === 429;
@@ -175,7 +166,7 @@ export async function callAiProxy(
       console.warn(
         `AI Proxy transient error (attempt ${attempt}/${maxAttempts}): ${response.status} - ${errorText}`
       );
-      correction = undefined; // this wasn't a validation issue; don't pollute the prompt
+      correction = undefined;
 
       if (attempt >= maxAttempts) {
         throw new Error(`AI Proxy Error after ${maxAttempts} attempts: ${response.status} - ${errorText}`);
@@ -183,8 +174,6 @@ export async function callAiProxy(
       continue;
     }
 
-    // 3b. OUTPUT BOUNDARY — safeParse (non-throwing) so a bad model reply is
-    //     handled as expected-and-recoverable, not an exception.
     const result = await response.json();
     const parsed = AiProxyOutputSchema.safeParse(result);
 
@@ -192,8 +181,6 @@ export async function callAiProxy(
       return parsed.data; // ✅ typed, validated, category guaranteed to be one of the 15
     }
 
-    // 4. Validation failed (e.g. category came back as "15. PTO"). Turn the
-    //    ZodError into a readable list and feed it into the next prompt.
     correction = parsed.error.issues
       .map((i) => `- ${i.path.join('.') || '(root)'}: ${i.message}`)
       .join('\n');
@@ -210,7 +197,5 @@ export async function callAiProxy(
     // loop continues with `correction` set → next prompt asks the model to fix it
   }
 
-  // Unreachable in practice (last iteration always returns or throws), but keeps
-  // the return type honest and guards against future refactors.
   throw new Error("Max attempts reached without a valid response.");
 }
