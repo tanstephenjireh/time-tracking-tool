@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 export default function SyncSettingsPage() {
   const [status, setStatus] = useState<any>(null);
   const [triggering, setTriggering] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const fetchStatus = () => {
     fetch('/api/sync/status')
@@ -19,7 +21,16 @@ export default function SyncSettingsPage() {
 
   const handleTrigger = async () => {
     setTriggering(true);
-    await fetch('/api/sync/trigger', { method: 'POST' });
+    
+    const body: any = {};
+    if (startDate) body.timeMin = new Date(startDate).toISOString();
+    if (endDate) body.timeMax = new Date(endDate).toISOString();
+    
+    await fetch('/api/sync/trigger', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
     fetchStatus();
     setTriggering(false);
   };
@@ -34,13 +45,32 @@ export default function SyncSettingsPage() {
             <h2 className="text-lg font-semibold text-slate-800">Calendar Data Sync</h2>
             <p className="text-sm text-slate-500 mt-1">Ingest raw calendar events and process them with AI.</p>
           </div>
-          <button 
-            onClick={handleTrigger}
-            disabled={status?.isSyncing || triggering}
-            className="bg-[#FDE047] hover:bg-[#FACC15] text-[#0F172A] font-medium py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {status?.isSyncing ? 'Sync in Progress...' : 'Run Manual Sync'}
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <input 
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                disabled={status?.isSyncing || triggering}
+                className="border border-slate-300 rounded-md px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" 
+              />
+              <span className="text-slate-400 text-sm">to</span>
+              <input 
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                disabled={status?.isSyncing || triggering}
+                className="border border-slate-300 rounded-md px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" 
+              />
+            </div>
+            <button 
+              onClick={handleTrigger}
+              disabled={status?.isSyncing || triggering}
+              className="bg-[#FDE047] hover:bg-[#FACC15] text-[#0F172A] font-medium py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {status?.isSyncing ? 'Sync in Progress...' : 'Run Manual Sync'}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

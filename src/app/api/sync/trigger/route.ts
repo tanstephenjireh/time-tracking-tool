@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
 import { runSyncTask } from '@/lib/syncTask';
 
-export async function POST() {
+export async function POST(req: Request) {
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch (e) {
+    // Ignore empty body
+  }
+  const { timeMin, timeMax } = body;
+
   // Start the sync process asynchronously without awaiting
-  runSyncTask().catch(err => {
+  runSyncTask({ timeMin, timeMax }).catch(err => {
     console.error('Unhandled error in background sync task', err);
   });
   

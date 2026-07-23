@@ -71,7 +71,7 @@ async function fetchWithRetry(url: string, attempt = 1): Promise<any> {
   }
 }
 
-export async function* fetchEvents(filterType: 'attendee' | 'creator', email: string, timeMin?: string) {
+export async function* fetchEvents(filterType: 'attendee' | 'creator', email: string, timeMin?: string, timeMax?: string) {
   const apiKey = await getApiKey();
   const params = new URLSearchParams({
     apiKey,
@@ -81,6 +81,7 @@ export async function* fetchEvents(filterType: 'attendee' | 'creator', email: st
   });
   
   if (timeMin) params.set('timeMin', timeMin);
+  if (timeMax) params.set('timeMax', timeMax);
   
   let nextPageToken = null;
   

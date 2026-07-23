@@ -25,7 +25,7 @@ async function retry<T>(fn: () => Promise<T>, maxAttempts = 3, eventId: string):
   throw new Error('Unreachable');
 }
 
-export async function runSyncTask() {
+export async function runSyncTask(options?: { timeMin?: string, timeMax?: string }) {
   const currentState = getSyncState();
   if (currentState.isSyncing) return;
 
@@ -71,7 +71,9 @@ export async function runSyncTask() {
     
     for (const emp of allEmployees) {
       for (const filterType of ['attendee', 'creator'] as const) {
-        const eventsGenerator = fetchEvents(filterType, emp.email, currentState.lastSyncedAt || undefined);
+        const fetchTimeMin = options?.timeMin || currentState.lastSyncedAt || undefined;
+        const fetchTimeMax = options?.timeMax;
+        const eventsGenerator = fetchEvents(filterType, emp.email, fetchTimeMin, fetchTimeMax);
         
         for await (const eventsPage of eventsGenerator) {
           for (const ev of eventsPage) {
